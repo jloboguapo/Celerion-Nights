@@ -53,9 +53,9 @@ const callMyCowtownBoys = async () => {
     subject: 'Available Studies',
     text: msgText,
   };
-  const job = schedule.scheduleJob('0 */2 * * *', () => {
-    msgText.length && mg.messages.create(process.env.DOMAIN, msg);
-  });
+  msgText.length && mg.messages.create(process.env.DOMAIN, msg);
 };
 
-callMyCowtownBoys();
+const job = schedule.scheduleJob('0 */2 * * *', () => {
+  callMyCowtownBoys();
+});
