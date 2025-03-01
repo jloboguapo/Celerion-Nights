@@ -13,7 +13,7 @@ const mg = mailgun.client({
 });
 const email = process.env.EMAIL;
 
-const callMyCowtownBoys = async () => {
+const callCelerion = async () => {
   const response = await fetch(
     'https://helpresearch.com/studies?field_csapi_gender_value=2&field_csapi_smoking_value=All&city=All&age=&maxbmi=All&minbmi=All&field_bmi_weight=&field_bmi_height='
   );
@@ -26,12 +26,12 @@ const callMyCowtownBoys = async () => {
       .map(name => name.innerHTML);
 
   const slicedStudies = arr => {
-    const res = [];
+    const slicedArrays = [];
     for (let i = 0; i < arr.length; i += 8) {
       const chunk = arr.slice(i, i + 8);
-      res.push(chunk);
+      slicedArrays.push(chunk);
     }
-    return res;
+    return slicedArrays;
   };
 
   const msgText = slicedStudies(getStudies())
@@ -56,6 +56,7 @@ const callMyCowtownBoys = async () => {
   msgText.length && mg.messages.create(process.env.DOMAIN, msg);
 };
 
-const job = schedule.scheduleJob('0 */2 * * *', () => {
-  callMyCowtownBoys();
-});
+// const job = schedule.scheduleJob('0 */2 * * *', () => {
+// });
+
+callCelerion();
