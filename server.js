@@ -13,39 +13,57 @@ const mg = mailgun.client({
 });
 const email = process.env.EMAIL;
 
-const callMyCowtownBoys = async () => {
+const CallFortrea = async () => {
   const response = await fetch(
-    'https://helpresearch.com/studies?field_csapi_gender_value=2&field_csapi_smoking_value=All&city=All&age=&maxbmi=All&minbmi=All&field_bmi_weight=&field_bmi_height='
+    'https://www.fortreaclinicaltrials.com/en-us/clinical-research/browse-studies?field_location_target_id=All&field_gender_target_id=10&field_age_target_id=18'
   );
   const data = await response.text();
   const dom = new JSDOM(data);
 
+  const hreflang = () =>
+    Array.from(dom.window.document.querySelectorAll('.views-field > a'))
+      .map(name => name.innerHTML)
+      .slice(6);
+
   const getStudies = () =>
-    Array.from(dom.window.document.querySelectorAll('.field-content'))
-      .filter(name => !name.innerHTML.includes('<span'))
-      .map(name => name.innerHTML);
+    Array.from(dom.window.document.querySelectorAll('.views-field'))
+      .map(name => name.innerHTML)
+      .slice(6);
 
   const slicedStudies = arr => {
-    const res = [];
-    for (let i = 0; i < arr.length; i += 8) {
-      const chunk = arr.slice(i, i + 8);
-      res.push(chunk);
+    const slicedArrays = [];
+    for (let i = 0; i < arr.length; i += 6) {
+      const chunk = arr.slice(i, i + 6);
+      slicedArrays.push(chunk);
     }
-    return res;
+    return slicedArrays;
   };
 
-  const msgText = slicedStudies(getStudies())
+  const noHreflang = slicedStudies(getStudies())
     .filter(
       innerArray => !innerArray.toString().toLowerCase().includes('overweight')
     )
-    .filter(innerArray => innerArray.toString().toLowerCase().includes('-ban'))
     .map(innerArray =>
-      innerArray
-        .filter(item => item !== '<i class="fas fa-smoking-ban"></i>')
-        .map(name => name.replaceAll('amp;', ''))
-        .join('\n')
-    )
-    .join('\n\n\n');
+      innerArray.filter(
+        name => !name.toString().toLowerCase().includes('hreflang')
+      )
+    );
+
+  const filteredStudies = (sourceArray, targetArrays) => {
+    for (let i = 0; i < sourceArray.length; i++) {
+      if (targetArrays[i] && Array.isArray(targetArrays[i])) {
+        targetArrays[i].unshift(sourceArray[i]);
+      }
+    }
+
+    return targetArrays
+      .map(innerArr =>
+        innerArr.map(name => name.replaceAll('amp;', '')).join('\n')
+      )
+      .join('\n\n\n');
+  };
+
+  const msgText = filteredStudies(hreflang(), noHreflang);
 
   const msg = {
     from: email,
@@ -56,6 +74,7 @@ const callMyCowtownBoys = async () => {
   msgText.length && mg.messages.create(process.env.DOMAIN, msg);
 };
 
-const job = schedule.scheduleJob('0 */2 * * *', () => {
-  callMyCowtownBoys();
-});
+// const job = schedule.scheduleJob('0 */2 * * *', () => {
+// });
+
+CallFortrea();
