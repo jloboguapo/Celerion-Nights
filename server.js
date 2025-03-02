@@ -84,7 +84,7 @@ const callCelerion = async () => {
   const msg = {
     from: email,
     to: email,
-    subject: 'Available Studies',
+    subject: 'Celerion Studies',
     text: msgText,
   };
   msgText.length && mg.messages.create(process.env.DOMAIN, msg);
