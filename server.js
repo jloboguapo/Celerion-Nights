@@ -42,30 +42,30 @@ const callCelerion = async () => {
 
   const studies = slicedStudies(preSlicedStudies);
 
-  const movePriceToTop = arr => {
+  const movePriceToBottom = arr => {
     arr.filter(innerArray =>
       innerArray.map(item =>
         item.includes('*')
-          ? innerArray.unshift(innerArray.splice(arr.indexOf(item), 1)[0])
+          ? innerArray.push(innerArray.splice(innerArray.indexOf(item), 1)[0])
           : item
       )
     );
     return arr;
   };
 
-  const studiesWithPriceAtTop = movePriceToTop(studies);
+  const studiesWithPriceAtBottom = movePriceToBottom(studies);
 
   const sortDollarAmountsDescending = arr => {
     arr.sort((a, b) => {
-      const amountA = parseFloat(a[0].replace(/[^0-9.-]+/g, ''));
-      const amountB = parseFloat(b[0].replace(/[^0-9.-]+/g, ''));
+      const amountA = parseFloat(a.at(-1).replace(/[^0-9.-]+/g, ''));
+      const amountB = parseFloat(b.at(-1).replace(/[^0-9.-]+/g, ''));
       return amountB - amountA;
     });
     return arr;
   };
 
   const sortedStudies = sortDollarAmountsDescending(
-    studiesWithPriceAtTop.slice()
+    studiesWithPriceAtBottom.slice()
   );
 
   const msgText = sortedStudies
