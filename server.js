@@ -21,20 +21,54 @@ const callCelerion = async () => {
   const dom = new JSDOM(data);
 
   const getStudies = () =>
-    Array.from(dom.window.document.querySelectorAll('.field-content'))
-      .filter(name => !name.innerHTML.includes('<span'))
-      .map(name => name.innerHTML);
+    Array.from(dom.window.document.querySelectorAll('.field-content')).map(
+      name =>
+        name.innerHTML.toLocaleLowerCase().includes('<span')
+          ? name.textContent
+          : name.innerHTML
+    );
+
+  const preSlicedStudies = getStudies();
 
   const slicedStudies = arr => {
     const slicedArrays = [];
-    for (let i = 0; i < arr.length; i += 8) {
-      const chunk = arr.slice(i, i + 8);
-      slicedArrays.push(chunk);
-    }
+    arr.map(
+      (_, index) =>
+        (index % 10 === 0 || index === 0) &&
+        slicedArrays.push(arr.slice(index, index + 10))
+    );
     return slicedArrays;
   };
 
-  const msgText = slicedStudies(getStudies())
+  const studies = slicedStudies(preSlicedStudies);
+
+  const movePriceToTop = arr => {
+    arr.filter(innerArray =>
+      innerArray.map(item =>
+        item.includes('*')
+          ? innerArray.unshift(innerArray.splice(arr.indexOf(item), 1)[0])
+          : item
+      )
+    );
+    return arr;
+  };
+
+  const studiesWithPriceAtTop = movePriceToTop(studies);
+
+  const sortDollarAmountsDescending = arr => {
+    arr.sort((a, b) => {
+      const amountA = parseFloat(a[0].replace(/[^0-9.-]+/g, ''));
+      const amountB = parseFloat(b[0].replace(/[^0-9.-]+/g, ''));
+      return amountB - amountA;
+    });
+    return arr;
+  };
+
+  const sortedStudies = sortDollarAmountsDescending(
+    studiesWithPriceAtTop.slice()
+  );
+
+  const msgText = sortedStudies
     .filter(
       innerArray => !innerArray.toString().toLowerCase().includes('overweight')
     )
