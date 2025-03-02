@@ -32,10 +32,12 @@ const CallFortrea = async () => {
 
   const slicedStudies = arr => {
     const slicedArrays = [];
-    for (let i = 0; i < arr.length; i += 6) {
-      const chunk = arr.slice(i, i + 6);
-      slicedArrays.push(chunk);
-    }
+    arr.map(
+      (_, index) =>
+        (index % 6 === 0 || index === 0) &&
+        slicedArrays.push(arr.slice(index, index + 6))
+    );
+
     return slicedArrays;
   };
 
@@ -50,11 +52,9 @@ const CallFortrea = async () => {
     );
 
   const filteredStudies = (sourceArray, targetArrays) => {
-    for (let i = 0; i < sourceArray.length; i++) {
-      if (targetArrays[i] && Array.isArray(targetArrays[i])) {
-        targetArrays[i].unshift(sourceArray[i]);
-      }
-    }
+    sourceArray.map((_, index) =>
+      targetArrays[index].unshift(sourceArray[index])
+    );
 
     return targetArrays
       .map(innerArr =>
