@@ -20,15 +20,19 @@ const CallFortrea = async () => {
   const data = await response.text();
   const dom = new JSDOM(data);
 
-  const hreflang = () =>
+  const getHreflang = () =>
     Array.from(dom.window.document.querySelectorAll('.views-field > a'))
       .map(name => name.innerHTML)
       .slice(6);
+
+  const hreflang = getHreflang();
 
   const getStudies = () =>
     Array.from(dom.window.document.querySelectorAll('.views-field'))
       .map(name => name.innerHTML)
       .slice(6);
+
+  const preSlicedStudies = getStudies();
 
   const slicedStudies = arr => {
     const slicedArrays = [];
@@ -41,7 +45,7 @@ const CallFortrea = async () => {
     return slicedArrays;
   };
 
-  const noHreflang = slicedStudies(getStudies())
+  const noHreflang = slicedStudies(preSlicedStudies)
     .filter(
       innerArray => !innerArray.toString().toLowerCase().includes('overweight')
     )
@@ -51,24 +55,33 @@ const CallFortrea = async () => {
       )
     );
 
+  const sortDollarAmountsDescending = arr => {
+    arr.sort((a, b) => {
+      const amountA = parseFloat(a.at(-1).replace(/[^0-9.-]+/g, ''));
+      const amountB = parseFloat(b.at(-1).replace(/[^0-9.-]+/g, ''));
+      return amountB - amountA;
+    });
+    return arr;
+  };
+
   const filteredStudies = (sourceArray, targetArrays) => {
     sourceArray.map((_, index) =>
       targetArrays[index].unshift(sourceArray[index])
     );
 
-    return targetArrays
+    return sortDollarAmountsDescending(targetArrays)
       .map(innerArr =>
         innerArr.map(name => name.replaceAll('amp;', '')).join('\n')
       )
       .join('\n\n\n');
   };
 
-  const msgText = filteredStudies(hreflang(), noHreflang);
+  const msgText = filteredStudies(hreflang, noHreflang);
 
   const msg = {
     from: email,
     to: email,
-    subject: 'Available Studies',
+    subject: 'Fortrea Studies',
     text: msgText,
   };
   msgText.length && mg.messages.create(process.env.DOMAIN, msg);
