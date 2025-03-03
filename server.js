@@ -87,7 +87,6 @@ const CallFortrea = async () => {
   msgText.length && mg.messages.create(process.env.DOMAIN, msg);
 };
 
-// const job = schedule.scheduleJob('0 */2 * * *', () => {
-// });
-
-CallFortrea();
+const job = schedule.scheduleJob('0 */4 * * *', () => {
+  CallFortrea();
+});
