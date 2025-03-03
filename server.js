@@ -93,3 +93,5 @@ const callCelerion = async () => {
 const job = schedule.scheduleJob('0 */4 * * *', () => {
   callCelerion();
 });
+
+callCelerion();
