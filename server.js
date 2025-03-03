@@ -90,3 +90,5 @@ const CallFortrea = async () => {
 const job = schedule.scheduleJob('0 */4 * * *', () => {
   CallFortrea();
 });
+
+CallFortrea();
