@@ -90,7 +90,6 @@ const callCelerion = async () => {
   msgText.length && mg.messages.create(process.env.DOMAIN, msg);
 };
 
-// const job = schedule.scheduleJob('0 */2 * * *', () => {
-// });
-
-callCelerion();
+const job = schedule.scheduleJob('0 */4 * * *', () => {
+  callCelerion();
+});
