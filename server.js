@@ -13,50 +13,51 @@ const mg = mailgun.client({
 });
 const email = process.env.EMAIL;
 
-const callCelerion = async () => {
-  const response = await fetch(
-    'https://helpresearch.com/studies?field_csapi_gender_value=2&field_csapi_smoking_value=All&city=All&age=&maxbmi=All&minbmi=All&field_bmi_weight=&field_bmi_height='
-  );
+const callDrVince = async () => {
+  const response = await fetch('https://drvince.com/participate-in-a-study/');
   const data = await response.text();
   const dom = new JSDOM(data);
 
   const getStudies = () =>
-    Array.from(dom.window.document.querySelectorAll('.field-content'))
-      .filter(name => !name.innerHTML.includes('<span'))
-      .map(name => name.innerHTML);
+    Array.from(
+      dom.window.document.querySelectorAll('div.grid-posts > div')
+    ).map(name =>
+      name.textContent
+        .replaceAll('\t', '')
+        .replaceAll('\n', '')
+        .replaceAll('  ', '')
+    );
 
-  const slicedStudies = arr => {
-    const slicedArrays = [];
-    for (let i = 0; i < arr.length; i += 8) {
-      const chunk = arr.slice(i, i + 8);
-      slicedArrays.push(chunk);
-    }
-    return slicedArrays;
+  const studies = getStudies();
+
+  const sortDollarAmountsDescending = arr => {
+    arr.sort((a, b) => {
+      const amountA = parseFloat(
+        a.match(/\$(\d+,\d{3})*/)?.[1].replace(',', '') || 0
+      );
+      const amountB = parseFloat(
+        b.match(/\$(\d+,\d{3})*/)?.[1].replace(',', '') || 0
+      );
+      return amountB - amountA;
+    });
+    return arr;
   };
 
-  const msgText = slicedStudies(getStudies())
-    .filter(
-      innerArray => !innerArray.toString().toLowerCase().includes('overweight')
-    )
-    .filter(innerArray => innerArray.toString().toLowerCase().includes('-ban'))
-    .map(innerArray =>
-      innerArray
-        .filter(item => item !== '<i class="fas fa-smoking-ban"></i>')
-        .map(name => name.replaceAll('amp;', ''))
-        .join('\n')
-    )
-    .join('\n\n\n');
+  const sortedStudies = sortDollarAmountsDescending(studies.slice());
+
+  const msgText = sortedStudies.join('\n\n\n');
 
   const msg = {
     from: email,
     to: email,
-    subject: 'Available Studies',
+    subject: 'Dr Vince Studies',
     text: msgText,
   };
   msgText.length && mg.messages.create(process.env.DOMAIN, msg);
 };
 
-// const job = schedule.scheduleJob('0 */2 * * *', () => {
-// });
+const job = schedule.scheduleJob('0 */4 * * *', () => {
+  callDrVince();
+});
 
-callCelerion();
+callDrVince();
