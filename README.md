@@ -1,2 +1,2 @@
 # Celerion-Nights
-Like the cowtown-twintail-check but for studies at Celerion
+Project to email me the studies currently available at Celerion
