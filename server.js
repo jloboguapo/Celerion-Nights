@@ -13,85 +13,208 @@ const mg = mailgun.client({
 });
 const email = process.env.EMAIL;
 
-const callCelerion = async () => {
-  const response = await fetch(
-    'https://helpresearch.com/studies?field_csapi_gender_value=2&field_csapi_smoking_value=All&city=All&age=&maxbmi=All&minbmi=All&field_bmi_weight=&field_bmi_height='
-  );
-  const data = await response.text();
-  const dom = new JSDOM(data);
+const getCombinedStudies = () => {
+  const callCelerion = async () => {
+    const response = await fetch(
+      'https://helpresearch.com/studies?field_csapi_gender_value=2&field_csapi_smoking_value=All&city=All&age=&maxbmi=All&minbmi=All&field_bmi_weight=&field_bmi_height='
+    );
+    const data = await response.text();
+    const dom = new JSDOM(data);
 
-  const getStudies = () =>
-    Array.from(dom.window.document.querySelectorAll('.field-content')).map(
-      name =>
-        name.innerHTML.toLocaleLowerCase().includes('<span')
-          ? name.textContent
-          : name.innerHTML
+    const getStudies = () =>
+      Array.from(dom.window.document.querySelectorAll('.field-content')).map(
+        name =>
+          name.innerHTML.toLocaleLowerCase().includes('<span')
+            ? name.textContent
+            : name.innerHTML
+      );
+
+    const preSlicedStudies = getStudies();
+
+    const slicedStudies = arr => {
+      const slicedArrays = [];
+      arr.map(
+        (_, index) =>
+          (index % 10 === 0 || index === 0) &&
+          slicedArrays.push(arr.slice(index, index + 10))
+      );
+      return slicedArrays;
+    };
+
+    const studies = slicedStudies(preSlicedStudies);
+
+    const movePriceToBottom = arr => {
+      arr.filter(innerArray =>
+        innerArray.map(item =>
+          item.includes('*')
+            ? innerArray.push(innerArray.splice(innerArray.indexOf(item), 1)[0])
+            : item
+        )
+      );
+      return arr;
+    };
+
+    const studiesWithPriceAtBottom = movePriceToBottom(studies);
+
+    const sortDollarAmountsDescending = arr => {
+      arr.sort((a, b) => {
+        const amountA = parseFloat(a.at(-1).replace(/[^0-9.-]+/g, ''));
+        const amountB = parseFloat(b.at(-1).replace(/[^0-9.-]+/g, ''));
+        return amountB - amountA;
+      });
+      return arr;
+    };
+
+    const sortedStudies = sortDollarAmountsDescending(
+      studiesWithPriceAtBottom.slice()
     );
 
-  const preSlicedStudies = getStudies();
-
-  const slicedStudies = arr => {
-    const slicedArrays = [];
-    arr.map(
-      (_, index) =>
-        (index % 10 === 0 || index === 0) &&
-        slicedArrays.push(arr.slice(index, index + 10))
-    );
-    return slicedArrays;
-  };
-
-  const studies = slicedStudies(preSlicedStudies);
-
-  const movePriceToBottom = arr => {
-    arr.filter(innerArray =>
-      innerArray.map(item =>
-        item.includes('*')
-          ? innerArray.push(innerArray.splice(innerArray.indexOf(item), 1)[0])
-          : item
+    const celerionStudies = sortedStudies
+      .filter(
+        innerArray =>
+          !innerArray.toString().toLowerCase().includes('overweight')
       )
+      .filter(innerArray =>
+        innerArray.toString().toLowerCase().includes('-ban')
+      )
+      .map(innerArray =>
+        innerArray
+          .filter(item => item !== '<i class="fas fa-smoking-ban"></i>')
+          .map(name => name.replaceAll('amp;', ''))
+          .join('\n')
+      )
+      .join('\n\n\n');
+
+    return `CELERION STUDIES\n\n\n\n${celerionStudies}`;
+  };
+
+  const callFortrea = async () => {
+    const response = await fetch(
+      'https://www.fortreaclinicaltrials.com/en-us/clinical-research/browse-studies?field_location_target_id=All&field_gender_target_id=10&field_age_target_id=18'
     );
-    return arr;
+    const data = await response.text();
+    const dom = new JSDOM(data);
+
+    const getHreflang = () =>
+      Array.from(dom.window.document.querySelectorAll('.views-field > a'))
+        .map(name => name.innerHTML)
+        .slice(6);
+
+    const hreflang = getHreflang();
+
+    const getStudies = () =>
+      Array.from(dom.window.document.querySelectorAll('.views-field'))
+        .map(name => name.innerHTML)
+        .slice(6);
+
+    const preSlicedStudies = getStudies();
+
+    const slicedStudies = arr => {
+      const slicedArrays = [];
+      arr.map(
+        (_, index) =>
+          (index % 6 === 0 || index === 0) &&
+          slicedArrays.push(arr.slice(index, index + 6))
+      );
+
+      return slicedArrays;
+    };
+
+    const noHreflang = slicedStudies(preSlicedStudies)
+      .filter(
+        innerArray =>
+          !innerArray.toString().toLowerCase().includes('overweight')
+      )
+      .map(innerArray =>
+        innerArray.filter(
+          name => !name.toString().toLowerCase().includes('hreflang')
+        )
+      );
+
+    const sortDollarAmountsDescending = arr => {
+      arr.sort((a, b) => {
+        const amountA = parseFloat(a.at(-1).replace(/[^0-9.-]+/g, ''));
+        const amountB = parseFloat(b.at(-1).replace(/[^0-9.-]+/g, ''));
+        return amountB - amountA;
+      });
+      return arr;
+    };
+
+    const filteredStudies = (sourceArray, targetArrays) => {
+      sourceArray.map((_, index) =>
+        targetArrays[index].unshift(sourceArray[index])
+      );
+
+      return sortDollarAmountsDescending(targetArrays)
+        .map(innerArr =>
+          innerArr.map(name => name.replaceAll('amp;', '')).join('\n')
+        )
+        .join('\n\n\n');
+    };
+
+    const fortreaStudies = filteredStudies(hreflang, noHreflang);
+
+    return `FORTREA STUDIES\n\n\n\n${fortreaStudies}`;
   };
 
-  const studiesWithPriceAtBottom = movePriceToBottom(studies);
+  const callDrVince = async () => {
+    const response = await fetch('https://drvince.com/participate-in-a-study/');
+    const data = await response.text();
+    const dom = new JSDOM(data);
 
-  const sortDollarAmountsDescending = arr => {
-    arr.sort((a, b) => {
-      const amountA = parseFloat(a.at(-1).replace(/[^0-9.-]+/g, ''));
-      const amountB = parseFloat(b.at(-1).replace(/[^0-9.-]+/g, ''));
-      return amountB - amountA;
+    const getStudies = () =>
+      Array.from(
+        dom.window.document.querySelectorAll('div.grid-posts > div')
+      ).map(name =>
+        name.textContent
+          .replaceAll('\t', '')
+          .replaceAll('\n', '')
+          .replaceAll('  ', '')
+      );
+
+    const studies = getStudies();
+
+    const sortDollarAmountsDescending = arr => {
+      arr.sort((a, b) => {
+        const amountA = parseFloat(
+          a.match(/\$(\d+,\d{3})*/)?.[1].replace(',', '') || 0
+        );
+        const amountB = parseFloat(
+          b.match(/\$(\d+,\d{3})*/)?.[1].replace(',', '') || 0
+        );
+        return amountB - amountA;
+      });
+      return arr;
+    };
+
+    const sortedStudies = sortDollarAmountsDescending(studies.slice());
+
+    const drVinceStudies = sortedStudies.join('\n\n');
+    return `DR. VINCE STUDIES\n\n\n\n${drVinceStudies}`;
+  };
+
+  Promise.allSettled([callCelerion(), callFortrea(), callDrVince()])
+    .then(values => values)
+    .then(result => {
+      const msgText = result
+        .map(value => value.value.toString())
+        .join('\n\n\n\n\n');
+
+      const msg = {
+        from: email,
+        to: email,
+        subject: 'Available Studies from Celerion, Fortrea, and Dr. Vince',
+        text: msgText,
+      };
+      msgText.length && mg.messages.create(process.env.DOMAIN, msg);
+    })
+    .catch(error => {
+      console.error('Promise rejected:', error);
     });
-    return arr;
-  };
-
-  const sortedStudies = sortDollarAmountsDescending(
-    studiesWithPriceAtBottom.slice()
-  );
-
-  const msgText = sortedStudies
-    .filter(
-      innerArray => !innerArray.toString().toLowerCase().includes('overweight')
-    )
-    .filter(innerArray => innerArray.toString().toLowerCase().includes('-ban'))
-    .map(innerArray =>
-      innerArray
-        .filter(item => item !== '<i class="fas fa-smoking-ban"></i>')
-        .map(name => name.replaceAll('amp;', ''))
-        .join('\n')
-    )
-    .join('\n\n\n');
-
-  const msg = {
-    from: email,
-    to: email,
-    subject: 'Celerion Studies',
-    text: msgText,
-  };
-  msgText.length && mg.messages.create(process.env.DOMAIN, msg);
 };
 
 const job = schedule.scheduleJob('0 */4 * * *', () => {
-  callCelerion();
+  getCombinedStudies();
 });
 
-callCelerion();
+getCombinedStudies();
